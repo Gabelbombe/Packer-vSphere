@@ -23,7 +23,12 @@ added for better usage with the vSphere's OVFTool.
 
  - [Building Packer](https://github.com/mitchellh/packer) from scratch and applying [patchfile](https://git.internal.t-mobile.com/jdaniel56/Packer-vSphere/blob/master/post-processor.go.patch)
  - Clone of my [Packer repository](https://git.internal.t-mobile.com/jdaniel56/Packer)
+ - Internet connection for ISO download
 
 
 ## Configurations
- - Configuring and adding .bashrc contents to you rc local file, followed by `exec bash` 
+ - Configuring and adding .bashrc contents to you rc local file, followed by `exec bash`
+
+
+## Running
+ - `$ ./testrun.sh`
