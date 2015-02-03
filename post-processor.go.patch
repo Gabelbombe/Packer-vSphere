@@ -1,5 +1,5 @@
 diff --git a/post-processor/vsphere/post-processor.go b/post-processor/vsphere/post-processor.go
-index 38bff43..05ee5d6 100644
+index 38bff43..f18d33e 100644
 --- a/post-processor/vsphere/post-processor.go
 +++ b/post-processor/vsphere/post-processor.go
 @@ -3,22 +3,26 @@ package vsphere
@@ -98,7 +98,7 @@ index 38bff43..05ee5d6 100644
  func (p *PostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact) (packer.Artifact, bool, error) {
  	if _, ok := builtins[artifact.BuilderId()]; !ok {
  		return nil, false, fmt.Errorf("Unknown artifact type, can't build box: %s", artifact.BuilderId())
-@@ -120,28 +135,89 @@ func (p *PostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact) (pac
+@@ -120,28 +135,90 @@ func (p *PostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact) (pac
  	}
  
  	args := []string{
@@ -197,6 +197,7 @@ index 38bff43..05ee5d6 100644
 +
  	var out bytes.Buffer
 -	log.Printf("Starting ovftool with parameters: %s", strings.Join(args, " "))
++	log.Printf("Starting OVFTool with parameters: %s", strings.Join(args, " "))
  	cmd := exec.Command("ovftool", args...)
  	cmd.Stdout = &out
 +
