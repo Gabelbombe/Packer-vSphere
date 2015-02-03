@@ -1,5 +1,5 @@
 diff --git a/post-processor/vsphere/post-processor.go b/post-processor/vsphere/post-processor.go
-index 38bff43..f18d33e 100644
+index 38bff43..3f34d23 100644
 --- a/post-processor/vsphere/post-processor.go
 +++ b/post-processor/vsphere/post-processor.go
 @@ -3,22 +3,26 @@ package vsphere
@@ -147,7 +147,7 @@ index 38bff43..f18d33e 100644
 +		args = append(args, fmt.Sprintf("--vmFolder=%s", p.config.VMFolder))
 +	}
 +
-+	if p.config.IPAllocation != "" {
++	if p.config.IPAllocation != "" || strings.ToLower(p.config.IPAllocation) == "none" {
 +		switch {
 +		case strings.ToLower(p.config.IPAllocation) == "dhcp":
 +			args = append(args, "--ipAllocationPolicy=dhcpPolicy")
