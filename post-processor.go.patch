@@ -1,5 +1,5 @@
 diff --git a/post-processor/vsphere/post-processor.go b/post-processor/vsphere/post-processor.go
-index 38bff43..c5724d8 100644
+index 38bff43..a145d3c 100644
 --- a/post-processor/vsphere/post-processor.go
 +++ b/post-processor/vsphere/post-processor.go
 @@ -3,22 +3,26 @@ package vsphere
@@ -158,11 +158,11 @@ index 38bff43..c5724d8 100644
 +		case strings.ToLower(p.config.IPAllocation) == "fixed":
 +			args = append(args, "--ipAllocationPolicy=fixedPolicy")
 +
-+		case strings.ToLower(p.config.IPAllocation) == "fixedallocated":
++		case strings.ToLower(p.config.IPAllocation) == "allocated":
 +			args = append(args, "--ipAllocationPolicy=fixedAllocatedPolicy")
 +
 +		default:
-+			return nil, false, fmt.Errorf("Allowed policies are: DHCP, Transient, Fixed and FixedAllocated.")
++			return nil, false, fmt.Errorf("Allowed policies are: DHCP, Transient, Fixed and Allocated.")
 +		}
 +	}
 +
