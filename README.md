@@ -13,7 +13,7 @@ appends an uneeded / when a resource pool is missing. Using this, the flag for r
 pool is now an optional field. In addition to this fix, several new flags have been
 added for better usage with the vSphere's OVFTool.
 
- - --ipAllocationPolicy ## IP policy for a deployed OVF, values are DHCP, Transient, Fixed and FixedAllocated
+ - --ipAllocationPolicy ## IP polices the OVF, values are DHCP, Transient, Fixed and FixedAllocated
  - --compression        ## Will compress the disks of the OVF, 1=Fastest 9=Highest Compression
  - --overwrite          ## Flag will clobber an existing OVF Template
  - --powerOn            ## Will turn OVF Template on after placement (currently incompatible with overwrite)
