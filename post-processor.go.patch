@@ -1,0 +1,205 @@
+diff --git a/post-processor/vsphere/post-processor.go b/post-processor/vsphere/post-processor.go
+index 38bff43..58ab970 100644
+--- a/post-processor/vsphere/post-processor.go
++++ b/post-processor/vsphere/post-processor.go
+@@ -3,22 +3,26 @@ package vsphere
+ import (
+ 	"bytes"
+ 	"fmt"
+-	"github.com/mitchellh/packer/common"
+-	"github.com/mitchellh/packer/packer"
+ 	"log"
+-	"net/url"
+ 	"os/exec"
+ 	"strings"
++
++	"github.com/mitchellh/packer/common"
++	"github.com/mitchellh/packer/packer"
+ )
+ 
+ var builtins = map[string]string{
+ 	"mitchellh.vmware": "vmware",
+ }
+ 
++// Config ...
+ type Config struct {
+ 	common.PackerConfig `mapstructure:",squash"`
+ 
+ 	Insecure     bool   `mapstructure:"insecure"`
++	Overwrite    bool   `mapstructure:"overwrite"`
++	Compression  uint   `mapstructure:"compression"`
++	IPAllocation string `mapstructure:"ipallocation"`
+ 	Cluster      string `mapstructure:"cluster"`
+ 	Datacenter   string `mapstructure:"datacenter"`
+ 	Datastore    string `mapstructure:"datastore"`
+@@ -30,14 +34,17 @@ type Config struct {
+ 	VMFolder     string `mapstructure:"vm_folder"`
+ 	VMName       string `mapstructure:"vm_name"`
+ 	VMNetwork    string `mapstructure:"vm_network"`
++	Power        string `mapstructure:"power"`
+ 
+ 	tpl *packer.ConfigTemplate
+ }
+ 
++// PostProcessor ...
+ type PostProcessor struct {
+ 	config Config
+ }
+ 
++// Configure ...
+ func (p *PostProcessor) Configure(raws ...interface{}) error {
+ 	_, err := common.DecodeConfig(&p.config, raws...)
+ 	if err != nil {
+@@ -65,14 +72,12 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
+ 
+ 	// First define all our templatable parameters that are _required_
+ 	templates := map[string]*string{
+-		"cluster":       &p.config.Cluster,
+-		"datacenter":    &p.config.Datacenter,
+-		"diskmode":      &p.config.DiskMode,
+-		"host":          &p.config.Host,
+-		"password":      &p.config.Password,
+-		"resource_pool": &p.config.ResourcePool,
+-		"username":      &p.config.Username,
+-		"vm_name":       &p.config.VMName,
++		"cluster":    &p.config.Cluster,
++		"datacenter": &p.config.Datacenter,
++		"host":       &p.config.Host,
++		"password":   &p.config.Password,
++		"username":   &p.config.Username,
++		"vm_name":    &p.config.VMName,
+ 	}
+ 	for key, ptr := range templates {
+ 		if *ptr == "" {
+@@ -85,8 +90,12 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
+ 	templates["datastore"] = &p.config.Datastore
+ 	templates["vm_network"] = &p.config.VMNetwork
+ 	templates["vm_folder"] = &p.config.VMFolder
++	templates["resource_pool"] = &p.config.ResourcePool
++	templates["diskmode"] = &p.config.DiskMode
++	templates["ipallocation"] = &p.config.IPAllocation
++	templates["power"] = &p.config.Power
+ 
+-	// Template process
++	// Template processc
+ 	for key, ptr := range templates {
+ 		*ptr, err = p.config.tpl.Process(*ptr, nil)
+ 		if err != nil {
+@@ -102,6 +111,12 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
+ 	return nil
+ }
+ 
++func checkError(err error) {
++	if err != nil {
++		log.Fatalf("Error: %s", err)
++	}
++}
++
+ func (p *PostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact) (packer.Artifact, bool, error) {
+ 	if _, ok := builtins[artifact.BuilderId()]; !ok {
+ 		return nil, false, fmt.Errorf("Unknown artifact type, can't build box: %s", artifact.BuilderId())
+@@ -120,28 +135,89 @@ func (p *PostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact) (pac
+ 	}
+ 
+ 	args := []string{
+-		fmt.Sprintf("--noSSLVerify=%t", p.config.Insecure),
+ 		"--acceptAllEulas",
+-		fmt.Sprintf("--name=%s", p.config.VMName),
+-		fmt.Sprintf("--datastore=%s", p.config.Datastore),
+-		fmt.Sprintf("--diskMode=%s", p.config.DiskMode),
+-		fmt.Sprintf("--network=%s", p.config.VMNetwork),
+-		fmt.Sprintf("--vmFolder=%s", p.config.VMFolder),
+-		fmt.Sprintf("%s", vmx),
+-		fmt.Sprintf("vi://%s:%s@%s/%s/host/%s/Resources/%s/",
+-			url.QueryEscape(p.config.Username),
+-			url.QueryEscape(p.config.Password),
+-			p.config.Host,
+-			p.config.Datacenter,
+-			p.config.Cluster,
+-			p.config.ResourcePool),
+ 	}
+ 
++	// Option to clobber a VM/OVF Template
++	if p.config.Overwrite == true {
++		args = append(args, "--powerOffSource")
++		args = append(args, "--overwrite")
++	}
++
++	// Option to power on VM
++	if p.config.Power == strings.ToLower("on") {
++		args = append(args, "--powerOn")
++	}
++
++	// Other non-valued flags
++	args = append(args, fmt.Sprintf("--noSSLVerify=%t", p.config.Insecure))
++	args = append(args, fmt.Sprintf("--name=%s", p.config.VMName))
++	args = append(args, fmt.Sprintf("--network=%s", p.config.VMNetwork))
++
++	if p.config.Datastore != "" {
++		args = append(args, fmt.Sprintf("--datastore=%s", p.config.Datastore))
++	}
++
++	if p.config.DiskMode != "" {
++		args = append(args, fmt.Sprintf("--diskMode=%s", p.config.DiskMode))
++	}
++
++	if p.config.VMFolder != "" {
++		args = append(args, fmt.Sprintf("--vmFolder=%s", p.config.VMFolder))
++	}
++
++	if p.config.IPAllocation != "" {
++		switch {
++		case strings.ToLower(p.config.IPAllocation) == "dhcp":
++			args = append(args, "--ipAllocationPolicy=dhcpPolicy")
++
++		case strings.ToLower(p.config.IPAllocation) == "transient":
++			args = append(args, "--ipAllocationPolicy=transientPolicy")
++
++		case strings.ToLower(p.config.IPAllocation) == "fixed":
++			args = append(args, "--ipAllocationPolicy=fixedPolicy")
++
++		case strings.ToLower(p.config.IPAllocation) == "fixedallocated":
++			args = append(args, "--ipAllocationPolicy=fixedAllocatedPolicy")
++
++		default:
++			return nil, false, fmt.Errorf("Allowed policies are: DHCP, Transient, Fixed and FixedAllocated.")
++		}
++	}
++
++	// Option to compress VM/OVF Template
++	if !(p.config.Compression >= 0 && p.config.Compression <= 9) {
++		return nil, false, fmt.Errorf("Invalid compression level. Must be between 1 and 9, or 0 for no compression.")
++	}
++
++	if p.config.Compression > 0 {
++		args = append(args, fmt.Sprintf("--compress=%d", p.config.Compression))
++	}
++
++	args = append(args, fmt.Sprintf("%s", vmx))
++
++	// This needs to be quoted to support spaces, NOT encoded...
++	viTarget := fmt.Sprintf("vi://%s:%s@%s/%s/host/%s/",
++		p.config.Username,
++		p.config.Password,
++		p.config.Host,
++		p.config.Datacenter,
++		p.config.Cluster)
++
++	if p.config.ResourcePool != "" {
++		viTarget = fmt.Sprintf("%sResources/%s/",
++			viTarget,
++			p.config.ResourcePool)
++	}
++
++	args = append(args, viTarget)
++
+ 	ui.Message(fmt.Sprintf("Uploading %s to vSphere", vmx))
++
+ 	var out bytes.Buffer
+-	log.Printf("Starting ovftool with parameters: %s", strings.Join(args, " "))
+ 	cmd := exec.Command("ovftool", args...)
+ 	cmd.Stdout = &out
++
+ 	if err := cmd.Run(); err != nil {
+ 		return nil, false, fmt.Errorf("Failed: %s\nStdout: %s", err, out.String())
+ 	}
