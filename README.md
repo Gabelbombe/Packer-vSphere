@@ -26,7 +26,7 @@ added for better usage with the vSphere's OVFTool.
 ## Requirements
 
  - [Building Packer](https://github.com/mitchellh/packer) from scratch and applying [patchfile](https://git.internal.t-mobile.com/jdaniel56/Packer-vSphere/blob/master/post-processor.go.patch)
- - Clone of my [Packer repository](https://git.internal.t-mobile.com/jdaniel56/Packer)
+ - Clone of my [Packer repository](https://github.com/ehime/Packer)
  - Internet connection for ISO download
 
 
